@@ -62,7 +62,7 @@ impl Display for Canvas {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         let mut s = String::new();
         for y in (0..self.height).step_by(4) {
-            s.push('|');
+            s.push('║');
             for x in (0..self.width).step_by(2) {
                 let braille = [
                     if x + 0 < self.width && y + 0 < self.height {Some((x + 0) + (y + 0) * self.width)} else {None},
@@ -82,11 +82,11 @@ impl Display for Canvas {
                 .collect::<Vec<u8>>();
                 s.push(braille::Braille::from(braille.as_slice()).0);
             }
-            s.push('|');
+            s.push('║');
             s.push('\n');
         }
         let width = (self.width as usize + 1) / 2 as usize;
-        write!(f, "+{:-^width$}+\n{s}+{:-^width$}+", "", "")
+        write!(f, "╔{:═^width$}╗\n{s}╚{:═^width$}╝", "", "")
     }
 }
 
