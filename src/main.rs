@@ -45,6 +45,11 @@ fn main() {
             .value_name("COUNTDOWN")
             .help("Sets the countdown before starting")
         )
+        .arg(Arg::new("reset")
+            .long("reset")
+            .value_name("RESET")
+            .help("Sets the reset of the world as an epoch modulo")
+        )
         .get_matches();
 
     let width: usize = matches.get_one::<String>("width").unwrap_or(&"20".to_string()).parse().unwrap();
@@ -59,6 +64,7 @@ fn main() {
     };
     let epoch: u64 = matches.get_one::<String>("epoch").unwrap_or(&"1000".to_string()).parse().unwrap();
     let countdown: bool = matches.get_one::<String>("countdown").unwrap_or(&"true".to_string()).parse().unwrap();
+    let reset: u64 = matches.get_one::<String>("reset").unwrap_or(&"0".to_string()).parse().unwrap();
 
     let mut world = World::new(
         rules.clone(),
@@ -75,7 +81,8 @@ fn main() {
         print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
         for count_down in (0..5).rev() {
             println!("{}{}", termion::cursor::Goto(1, 1), world);
-            println!("Rules: {:?}, width: {}, height: {}, tbt: {}", rules, width, height, tbt);
+            // DEBUG
+            // println!("Rules: {:?}, width: {}, height: {}, tbt: {}", rules, width, height, tbt);
             println!("Starting in {}...", count_down+1);
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
@@ -84,12 +91,19 @@ fn main() {
     print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
     // DEBUG
     // println!("{world}");
-    for _ in 0..epoch {
+    for epoch in 0..epoch {
         world.tick();
         // DEBUG
         // println!("{world}");
         // NOT DEBUG
         print!("{}{}", termion::cursor::Goto(1, 1), world);
         std::thread::sleep(std::time::Duration::from_millis(tbt));
+        if reset > 0 && epoch % reset == 0 {
+            world = World::new(
+                rules.clone(),
+                width,
+                height,
+            );
+        }
     }
 }
