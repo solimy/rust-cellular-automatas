@@ -50,8 +50,8 @@ pub struct World
 {
     pub width: usize,
     pub height: usize,
-    rule: Rules,
-    cells: Vec<Cell>,
+    pub rule: Rules,
+    pub cells: Vec<Cell>,
 }
 
 
