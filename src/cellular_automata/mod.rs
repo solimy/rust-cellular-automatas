@@ -3,6 +3,8 @@ mod highlife;
 mod gravity;
 
 
+use rayon::prelude::IntoParallelRefIterator;
+
 use crate::canvas::{Canvas, Pixel};
 
 #[derive(Debug, Clone)]

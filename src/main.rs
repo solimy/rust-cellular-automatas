@@ -14,7 +14,7 @@ use bevy::{
     prelude::*,
     time::common_conditions::on_timer,
     sprite::MaterialMesh2dBundle,
-    window::WindowResolution,
+    window::WindowResolution, render::{texture::CompressedImageFormats, render_resource::{Extent3d, TextureFormat, TextureDimension}},
 };
 
 use rayon::prelude::*;
@@ -31,15 +31,9 @@ struct Dimensions {
     height: u16,
 }
 
-#[derive(Resource)]
-struct CellsMaterials {
-    dead: Handle<ColorMaterial>,
-    alive: Handle<ColorMaterial>,
-}
-
 #[derive(Component)]
-struct WorldIndex {
-    i: usize,
+struct WorldRepr {
+    handle: Handle<Image>,
 }
 
 #[derive(Resource)]
@@ -51,8 +45,9 @@ struct WorldState {
 fn main() {
     let config = Config::default();
     let tbt = config.0.tbt;
-    let width = (config.0.width * 5) as f32;
-    let height = (config.0.height * 5) as f32;
+    let scale = config.0.scale;
+    let width = (config.0.width * scale) as f32;
+    let height = (config.0.height * scale) as f32;
     let dimensions = Dimensions {
         width: width as u16,
         height: height as u16,
@@ -81,13 +76,20 @@ fn main() {
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    dim: Res<Dimensions>,
+    mut images: ResMut<Assets<Image>>,
     config: Res<Config>,
-    asset_server: Res<AssetServer>,
 ) {
     commands.spawn(Camera2dBundle::default());
+
+    let handle = images.add(Image {..default()});
+
+    commands.spawn((
+        WorldRepr {handle: handle.clone()},
+        SpriteBundle {
+            texture: handle.clone(),
+            ..Default::default()
+        },
+    ));
 
     let settings = &config.0;
 
@@ -97,40 +99,6 @@ fn setup(
         settings.height,
     );
 
-    let cell_width = dim.width as f32 / world.width as f32;
-    let cell_height = dim.height as f32 / world.height as f32;
-
-    let black_material = materials.add(ColorMaterial::from(Color::BLACK));
-    let white_material = materials.add(ColorMaterial::from(Color::WHITE));
-
-    let cells_materials = CellsMaterials {
-        dead: black_material.clone(),
-        alive: white_material.clone(),
-    };
-
-    commands.insert_resource(cells_materials);
-
-    for x in 0..world.width {
-        for y in 0..world.height {
-            commands.spawn((MaterialMesh2dBundle {
-                mesh: meshes.add(shape::Quad::new(Vec2::new(
-                    cell_width,
-                    cell_height,
-                )).into()).into(),
-                material: white_material.clone(),
-                transform: Transform::from_translation(Vec3::new(
-                    // reverse coordinates, up is down
-                    x as f32 * cell_width - dim.width as f32 / 2.0,
-                    dim.height as f32 / 2.0 - y as f32 * cell_height,
-                    0.0,
-                )),
-                ..Default::default()
-            }, WorldIndex { i: x + y * world.width }));
-        }
-    }
-
-
-    // NOT DEBUG
     world.populate(0.2);
     world.revive(0, 0);
     world.revive(0, 1);
@@ -139,24 +107,56 @@ fn setup(
 }
 
 
-// tick only every settings.tbt milliseconds
 fn world_update(
-    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
     mut world_state: ResMut<WorldState>,
-    query: Query<Entity, With<WorldIndex>>,
-    world_index: Query<&WorldIndex>,
-    cells_materials: Res<CellsMaterials>,
+    dim: Res<Dimensions>,
+    mut query: Query<&mut WorldRepr>,
 ) {
     world_state.world.tick();
-    query.iter().for_each(|entity| {
-        let index = world_index.get(entity).unwrap().i;
-        commands.entity(entity).remove::<Handle<ColorMaterial>>();
-        commands.entity(entity).insert(if world_state.world.cells[index].is_alive {
-            cells_materials.alive.clone()
+
+    let mut world_repr = query.single_mut();
+
+    let cell_width = dim.width as usize / world_state.world.width;
+    let cell_height = dim.height as usize / world_state.world.height;
+
+    let mut image_byte_buffer = vec![0; dim.width as usize * dim.height as usize * 4];
+
+    world_state.world.cells.iter().enumerate().for_each(|(i, cell)| {
+        let x = i % world_state.world.width;
+        let y = i / world_state.world.width;
+
+        let x = x * cell_width;
+        let y = y * cell_height;
+
+        let color = if cell.is_alive {
+            [255, 255, 255, 255]
         } else {
-            cells_materials.dead.clone()
-        });        
+            [0, 0, 0, 255]
+        };
+
+        for x in x..x + cell_width {
+            for y in y..y + cell_height {
+                let i = (x + y * dim.width as usize) * 4;
+                image_byte_buffer[i..i + 4].copy_from_slice(&color);
+            }
+        }
     });
+
+
+    let image = Image::new(
+        Extent3d {
+            width: dim.width as u32,
+            height: dim.height as u32,
+            ..default()
+        },
+        TextureDimension::D2,
+        image_byte_buffer,
+        TextureFormat::Rgba8UnormSrgb,
+    );
+
+    world_repr.handle = images.set(world_repr.handle.clone(), image);
+
 }
 
 
