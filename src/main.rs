@@ -14,7 +14,7 @@ use bevy::{
         render_resource::{Extent3d, TextureDimension, TextureFormat},
     },
     time::common_conditions::on_timer,
-    window::WindowResolution,
+    window::{WindowResolution, WindowResized},
 };
 
 use cellular_automata::World;
@@ -83,10 +83,12 @@ fn main() {
             ..default()
         }))
         .add_startup_system(setup)
+        .add_system(window_resized_event)
         .add_system(sync_dimensions)
         .add_system(world_update.run_if(on_timer(Duration::from_millis(tbt))))
         .run()
 }
+
 
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn(Camera2dBundle::default());
@@ -103,6 +105,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         },
     ));
 }
+
 
 fn world_update(
     mut images: ResMut<Assets<Image>>,
@@ -159,7 +162,22 @@ fn world_update(
     world_repr.handle = images.set(world_repr.handle.clone(), image);
 }
 
-fn sync_dimensions(dim: Res<Dimensions>, mut windows: Query<&mut Window>) {
+
+fn window_resized_event(
+    mut events: EventReader<WindowResized>,
+    mut dim: ResMut<Dimensions>,
+) {
+    for event in events.iter() {
+        dim.width = event.width as u16;
+        dim.height = event.height as u16;
+    }
+}
+
+
+fn sync_dimensions(
+    dim: Res<Dimensions>,
+    mut windows: Query<&mut Window>
+) {
     if dim.is_changed() {
         let mut window = windows.single_mut();
         window.resolution.set(dim.width as f32, dim.height as f32);
