@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use crate::braille;
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct Pixel {
     pub r: u8,
@@ -10,7 +9,6 @@ pub struct Pixel {
     pub b: u8,
     pub a: u8,
 }
-
 
 #[derive(Debug)]
 pub struct Canvas {
@@ -24,7 +22,15 @@ impl Canvas {
         Canvas {
             width: width,
             height: height,
-            pixels: vec![Pixel { r: 0, g: 0, b: 0, a: 0 }; (width * height) as usize]
+            pixels: vec![
+                Pixel {
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                    a: 0
+                };
+                (width * height) as usize
+            ],
         }
     }
 
@@ -32,6 +38,7 @@ impl Canvas {
         self.pixels[(x + y * self.width) as usize] = pixel;
     }
 
+    #[allow(dead_code)]
     pub fn draw_line(&mut self, x0: usize, y0: usize, x1: usize, y1: usize, pixel: Pixel) {
         let dx = (x1 as isize - x0 as isize).abs();
         let sx = if x0 < x1 { 1 } else { -1 };
@@ -65,20 +72,56 @@ impl Display for Canvas {
             s.push('║');
             for x in (0..self.width).step_by(2) {
                 let braille = [
-                    if x + 0 < self.width && y + 0 < self.height {Some((x + 0) + (y + 0) * self.width)} else {None},
-                    if x + 0 < self.width && y + 1 < self.height {Some((x + 0) + (y + 1) * self.width)} else {None},
-                    if x + 0 < self.width && y + 2 < self.height {Some((x + 0) + (y + 2) * self.width)} else {None},
-                    if x + 1 < self.width && y + 0 < self.height {Some((x + 1) + (y + 0) * self.width)} else {None},
-                    if x + 1 < self.width && y + 1 < self.height {Some((x + 1) + (y + 1) * self.width)} else {None},
-                    if x + 1 < self.width && y + 2 < self.height {Some((x + 1) + (y + 2) * self.width)} else {None},
-                    if x + 0 < self.width && y + 3 < self.height {Some((x + 0) + (y + 3) * self.width)} else {None},
-                    if x + 1 < self.width && y + 3 < self.height {Some((x + 1) + (y + 3) * self.width)} else {None},
+                    if x + 0 < self.width && y + 0 < self.height {
+                        Some((x + 0) + (y + 0) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 0 < self.width && y + 1 < self.height {
+                        Some((x + 0) + (y + 1) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 0 < self.width && y + 2 < self.height {
+                        Some((x + 0) + (y + 2) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 1 < self.width && y + 0 < self.height {
+                        Some((x + 1) + (y + 0) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 1 < self.width && y + 1 < self.height {
+                        Some((x + 1) + (y + 1) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 1 < self.width && y + 2 < self.height {
+                        Some((x + 1) + (y + 2) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 0 < self.width && y + 3 < self.height {
+                        Some((x + 0) + (y + 3) * self.width)
+                    } else {
+                        None
+                    },
+                    if x + 1 < self.width && y + 3 < self.height {
+                        Some((x + 1) + (y + 3) * self.width)
+                    } else {
+                        None
+                    },
                 ]
                 .iter()
-                .map(|&i| if let Some(i) = i {
-                    let pixel = self.pixels[i as usize];
-                    (((pixel.r | pixel.g | pixel.b) & pixel.a) > 0) as u8
-                } else {0})
+                .map(|&i| {
+                    if let Some(i) = i {
+                        let pixel = self.pixels[i as usize];
+                        (((pixel.r | pixel.g | pixel.b) & pixel.a) > 0) as u8
+                    } else {
+                        0
+                    }
+                })
                 .collect::<Vec<u8>>();
                 s.push(braille::Braille::from(braille.as_slice()).0);
             }

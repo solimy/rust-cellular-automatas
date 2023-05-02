@@ -1,6 +1,5 @@
 use super::{Cell, Neighbors};
 
-
 pub fn tick(cell: &mut Cell, neighbors: &Neighbors) {
     let alive_neighbors = [
         neighbors.up_left,

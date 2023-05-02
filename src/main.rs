@@ -1,29 +1,26 @@
-extern crate termion;
 extern crate clap;
-
+extern crate termion;
 
 mod braille;
 mod canvas;
 mod cellular_automata;
 mod settings;
 
-
 use std::time::Duration;
 
 use bevy::{
     prelude::*,
+    render::{
+        render_resource::{Extent3d, TextureDimension, TextureFormat},
+    },
     time::common_conditions::on_timer,
-    sprite::MaterialMesh2dBundle,
-    window::WindowResolution, render::{texture::CompressedImageFormats, render_resource::{Extent3d, TextureFormat, TextureDimension}},
+    window::WindowResolution,
 };
-
-use rayon::prelude::*;
 
 use cellular_automata::World;
 
 #[derive(Resource, Default)]
 struct Config(settings::CommandLineProvidedSettings);
-
 
 #[derive(Resource)]
 struct Dimensions {
@@ -41,7 +38,6 @@ struct WorldState {
     world: World,
 }
 
-
 fn main() {
     let config = Config::default();
     let tbt = config.0.tbt;
@@ -53,59 +49,60 @@ fn main() {
         height: height as u16,
     };
 
+    let mut world = World::new(
+        config.0.rules.clone(),
+        config.0.width,
+        config.0.height,
+        config.0.reset,
+        0.2,
+    );
+
+    world.populate();
+    world.revive(0, 0);
+    world.revive(0, 1);
+
+    if config.0.text {
+        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
+        return for _ in 0..config.0.epoch {
+            print!("{}{}", termion::cursor::Goto(1, 1), world);
+            world.tick();
+            std::thread::sleep(Duration::from_millis(tbt));
+        };
+    }
+
     App::new()
         .insert_resource(dimensions)
         .insert_resource(config)
-        .add_plugins(
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: WindowResolution::new(width, height)
-                        .with_scale_factor_override(1.0),
-                    title: "Cellular automata".into(),
-                    ..default()
-                }),
+        .insert_resource(WorldState { world })
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(width, height).with_scale_factor_override(1.0),
+                title: "Cellular automata".into(),
                 ..default()
             }),
-        )
+            ..default()
+        }))
         .add_startup_system(setup)
         .add_system(sync_dimensions)
         .add_system(world_update.run_if(on_timer(Duration::from_millis(tbt))))
         .run()
 }
 
-
-fn setup(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    config: Res<Config>,
-) {
+fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn(Camera2dBundle::default());
 
-    let handle = images.add(Image {..default()});
+    let handle = images.add(Image { ..default() });
 
     commands.spawn((
-        WorldRepr {handle: handle.clone()},
+        WorldRepr {
+            handle: handle.clone(),
+        },
         SpriteBundle {
             texture: handle.clone(),
             ..Default::default()
         },
     ));
-
-    let settings = &config.0;
-
-    let mut world = World::new(
-        settings.rules.clone(),
-        settings.width,
-        settings.height,
-    );
-
-    world.populate(0.2);
-    world.revive(0, 0);
-    world.revive(0, 1);
-
-    commands.insert_resource(WorldState { world });
 }
-
 
 fn world_update(
     mut images: ResMut<Assets<Image>>,
@@ -122,27 +119,31 @@ fn world_update(
 
     let mut image_byte_buffer = vec![0; dim.width as usize * dim.height as usize * 4];
 
-    world_state.world.cells.iter().enumerate().for_each(|(i, cell)| {
-        let x = i % world_state.world.width;
-        let y = i / world_state.world.width;
+    world_state
+        .world
+        .cells
+        .iter()
+        .enumerate()
+        .for_each(|(i, cell)| {
+            let x = i % world_state.world.width;
+            let y = i / world_state.world.width;
 
-        let x = x * cell_width;
-        let y = y * cell_height;
+            let x = x * cell_width;
+            let y = y * cell_height;
 
-        let color = if cell.is_alive {
-            [255, 255, 255, 255]
-        } else {
-            [0, 0, 0, 255]
-        };
+            let color = if cell.is_alive {
+                [255, 255, 255, 255]
+            } else {
+                [0, 0, 0, 255]
+            };
 
-        for x in x..x + cell_width {
-            for y in y..y + cell_height {
-                let i = (x + y * dim.width as usize) * 4;
-                image_byte_buffer[i..i + 4].copy_from_slice(&color);
+            for x in x..x + cell_width {
+                for y in y..y + cell_height {
+                    let i = (x + y * dim.width as usize) * 4;
+                    image_byte_buffer[i..i + 4].copy_from_slice(&color);
+                }
             }
-        }
-    });
-
+        });
 
     let image = Image::new(
         Extent3d {
@@ -156,9 +157,7 @@ fn world_update(
     );
 
     world_repr.handle = images.set(world_repr.handle.clone(), image);
-
 }
-
 
 fn sync_dimensions(dim: Res<Dimensions>, mut windows: Query<&mut Window>) {
     if dim.is_changed() {

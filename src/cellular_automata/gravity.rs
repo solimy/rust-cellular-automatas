@@ -1,6 +1,5 @@
 use super::{Cell, Neighbors};
 
-
 pub fn tick(cell: &mut Cell, neighbors: &Neighbors, stack: bool) {
     cell.is_protected = if let Some(down) = neighbors.down {
         down.is_protected && cell.is_alive && stack

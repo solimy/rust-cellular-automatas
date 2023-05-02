@@ -1,13 +1,7 @@
 pub struct Braille(pub char);
 
-
-pub fn mask(arr : &[u8]) -> u8 {
-    arr
-        .iter()
-        .step_by(1)
-        .enumerate()
-        .map(|(i, x)| x << i)
-        .sum()
+pub fn mask(arr: &[u8]) -> u8 {
+    arr.iter().step_by(1).enumerate().map(|(i, x)| x << i).sum()
 }
 
 impl From<&[u8]> for Braille {
@@ -15,7 +9,6 @@ impl From<&[u8]> for Braille {
         Braille(std::char::from_u32(10240 + mask(arr) as u32).unwrap())
     }
 }
-
 
 #[test]
 fn test_mask() {
