@@ -13,6 +13,8 @@ pub fn tick(cell: &mut Cell, neighbors: &Neighbors, stack: bool) {
         cell.is_protected && cell.is_alive
     };
 
+    cell.get_older();
+
     // println!("alive({}), protected({})", cell.is_alive, cell.is_protected)
 }
 

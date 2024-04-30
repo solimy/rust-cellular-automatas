@@ -20,4 +20,5 @@ pub fn tick(cell: &mut Cell, neighbors: &Neighbors) {
         (false, 3) => true,
         _ => false,
     };
+    cell.get_older();
 }

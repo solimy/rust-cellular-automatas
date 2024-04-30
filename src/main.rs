@@ -17,7 +17,7 @@ use bevy::{
     window::{WindowResolution, WindowResized},
 };
 
-use cellular_automata::World;
+use cellular_automata::{Rules, World};
 
 #[derive(Resource, Default)]
 struct Config(settings::CommandLineProvidedSettings);
@@ -36,6 +36,11 @@ struct WorldRepr {
 #[derive(Resource)]
 struct WorldState {
     world: World,
+}
+
+#[derive(Resource)]
+struct ColorGenerator {
+    grad: colorgrad::Gradient,
 }
 
 fn main() {
@@ -73,6 +78,15 @@ fn main() {
     App::new()
         .insert_resource(dimensions)
         .insert_resource(config)
+        .insert_resource(ColorGenerator { grad: colorgrad::CustomGradient::new()
+            .html_colors(match &(world.rule) {
+                Rules::HighLife => &["Pink", "HotPink", "MediumVioletRed"],
+                Rules::Conway =>  &["Lime", "Green", "DarkOliveGreen"],
+                Rules::Gravity(true) =>  &["LightCyan", "LightSteelBlue"],
+                Rules::Gravity(false) =>  &["DodgerBlue", "PowderBlue"],
+            })
+            .build().unwrap()
+        })
         .insert_resource(WorldState { world })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -109,6 +123,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
 fn world_update(
     mut images: ResMut<Assets<Image>>,
+    color_generator: Res<ColorGenerator>,
     mut world_state: ResMut<WorldState>,
     dim: Res<Dimensions>,
     mut query: Query<&mut WorldRepr>,
@@ -134,8 +149,10 @@ fn world_update(
             let x = x * cell_width;
             let y = y * cell_height;
 
+            let rgba = color_generator.grad.at((cell.age / u8::MAX).into()).to_rgba8();
+
             let color = if cell.is_alive {
-                [255, 255, 255, 255]
+                rgba
             } else {
                 [0, 0, 0, 255]
             };

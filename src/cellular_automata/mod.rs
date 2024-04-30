@@ -8,6 +8,7 @@ use crate::canvas::{Canvas, Pixel};
 pub struct Cell {
     pub is_alive: bool,
     pub is_protected: bool,
+    pub age: u8,
 }
 
 impl Cell {
@@ -15,7 +16,12 @@ impl Cell {
         Cell {
             is_alive: false,
             is_protected: true,
+            age: 0,
         }
+    }
+
+    pub fn get_older(&mut self) {
+        self.age = if self.is_alive { if self.age < u8::MAX { self.age + 1 } else { u8::MAX } } else { 0 };
     }
 }
 
