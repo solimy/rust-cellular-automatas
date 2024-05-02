@@ -82,7 +82,7 @@ fn main() {
             .html_colors(match &(world.rule) {
                 Rules::HighLife => &["Pink", "HotPink", "MediumVioletRed"],
                 Rules::Conway =>  &["Lime", "Green", "DarkOliveGreen"],
-                Rules::Gravity(true) =>  &["LightCyan", "LightSteelBlue"],
+                Rules::Gravity(true) =>  &["LightCyan", "LightSteelBlue", "SteelBlue"],
                 Rules::Gravity(false) =>  &["DodgerBlue", "PowderBlue"],
             })
             .build().unwrap()
@@ -149,7 +149,12 @@ fn world_update(
             let x = x * cell_width;
             let y = y * cell_height;
 
-            let rgba = color_generator.grad.at((cell.age / u8::MAX).into()).to_rgba8();
+            let at = (std::cmp::min(cell.age, world_state.world.reset_at_epoch) as f64) / (world_state.world.reset_at_epoch as f64);
+            let at = if at.is_nan() {
+                0.0
+            } else { at };
+
+            let rgba = color_generator.grad.at(at).to_rgba8();
 
             let color = if cell.is_alive {
                 rgba

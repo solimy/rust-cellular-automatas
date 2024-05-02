@@ -4,11 +4,15 @@ mod highlife;
 
 use crate::canvas::{Canvas, Pixel};
 
+
+type Age = u64;
+
+
 #[derive(Debug, Clone)]
 pub struct Cell {
     pub is_alive: bool,
     pub is_protected: bool,
-    pub age: u8,
+    pub age: Age,
 }
 
 impl Cell {
@@ -21,7 +25,7 @@ impl Cell {
     }
 
     pub fn get_older(&mut self) {
-        self.age = if self.is_alive { if self.age < u8::MAX { self.age + 1 } else { u8::MAX } } else { 0 };
+        self.age = if self.is_alive { if self.age < Age::MAX { self.age + 1 } else { Age::MAX } } else { 0 };
     }
 }
 
